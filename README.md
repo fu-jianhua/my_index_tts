@@ -126,7 +126,13 @@ Download by `huggingface-cli`:
 
 ```bash
 huggingface-cli download IndexTeam/Index-TTS \
-  bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab \
+  bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab config.yaml\
+  --local-dir checkpoints
+```
+
+```bash
+huggingface-cli IndexTeam/IndexTTS-1.5 \
+  bigvgan_discriminator.pth bigvgan_generator.pth bpe.model dvae.pth gpt.pth unigram_12000.vocab config.yaml\
   --local-dir checkpoints
 ```
 
