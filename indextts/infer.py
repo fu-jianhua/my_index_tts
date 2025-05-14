@@ -189,10 +189,17 @@ class IndexTTS:
             return tokens[-1]
         max_len = max(t.size(1) for t in tokens)
         outputs = []
+        # 获取配置文件中的版本号
+        version = self.cfg.version if hasattr(self.cfg, "version") else 1.0
         for tensor in tokens:
             pad_len = max_len - tensor.size(1)
             if pad_len > 0:
-                n = min(8, pad_len)
+                if version == 1.0:
+                    # v1.0模型
+                    n = min(8, pad_len)
+                else:
+                    # v1.5模型
+                    n = min(pad_len//2, pad_len)
                 tensor = torch.nn.functional.pad(tensor, (0, n), value=self.cfg.gpt.stop_text_token)
                 tensor = torch.nn.functional.pad(tensor, (0, pad_len - n), value=self.cfg.gpt.start_text_token)
             tensor = tensor[:, :max_len]
@@ -746,7 +753,7 @@ class IndexTTS:
                 # wavs.append(wav[:, :-512])
                 wavs.append(wav.cpu())  # to cpu before saving
                 
-        return torch.cat(wavs, dim=0)
+        return torch.cat(wavs, dim=1)
     
     
     def my_infer_fast(self, audio_prompt, text, output_path, verbose=False):
@@ -963,7 +970,7 @@ class IndexTTS:
         end_time = time.perf_counter()
         self.torch_empty_cache()
         
-        return torch.cat(wavs, dim=0)
+        return torch.cat(wavs, dim=1)
 
 if __name__ == "__main__":
     prompt_wav="test_data/input.wav"

@@ -20,7 +20,8 @@ from tools.i18n.i18n import I18nAuto
 
 i18n = I18nAuto(language="zh_CN")
 MODE = 'local'
-tts = IndexTTS(model_dir="checkpoints",cfg_path="checkpoints/config.yaml")
+# tts = IndexTTS(model_dir="checkpoints",cfg_path="checkpoints/config.yaml")
+tts = IndexTTS(model_dir="checkpoints_v1.5",cfg_path="checkpoints_v1.5/config.yaml")
 
 os.makedirs("outputs/tasks",exist_ok=True)
 os.makedirs("prompts",exist_ok=True)
