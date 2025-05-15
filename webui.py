@@ -27,7 +27,16 @@ os.makedirs("outputs/tasks",exist_ok=True)
 os.makedirs("prompts",exist_ok=True)
 
 
-def gen_single(prompt, text, infer_mode, progress=gr.Progress()):
+def gen_single(prompt, text, infer_mode, speed, pitch, volume, progress=gr.Progress()):
+    """
+    提交语音合成任务
+    prompt: 参考音频
+    text: 待合成的目标文本
+    infer_mode: 推理模式，普通推理或批次推理
+    speed: 语速倍率，float，大于1时加快，小于1时放慢
+    pitch: 语调调整，半音数，正值提升，负值降低
+    volume: 音量倍率，float，大于1时放大，小于1时减小
+    """
     output_path = None
     if not output_path:
         output_path = os.path.join("outputs", f"spk_{int(time.time())}.wav")
@@ -35,10 +44,10 @@ def gen_single(prompt, text, infer_mode, progress=gr.Progress()):
     tts.gr_progress = progress
     if infer_mode == "普通推理":
         # output = tts.infer(prompt, text, output_path) # 普通推理
-        output = tts.my_infer(prompt, text, output_path) # 普通推理
+        output = tts.my_infer(prompt, text, output_path, speed, pitch, volume) # 普通推理
     else:
         # output = tts.infer_fast(prompt, text, output_path) # 批次推理
-        output = tts.my_infer_fast(prompt, text, output_path) # 批次推理
+        output = tts.my_infer_fast(prompt, text, output_path, speed, pitch, volume) # 批次推理
     return gr.update(value=output,visible=True)
 
 def update_prompt_audio():
@@ -67,6 +76,21 @@ with gr.Blocks() as demo:
             with gr.Column():
                 input_text_single = gr.TextArea(label="请输入目标文本",key="input_text_single")
                 infer_mode = gr.Radio(choices=["普通推理", "批次推理"], label="选择推理模式（批次推理：更适合长句，性能翻倍）",value="普通推理")
+                
+                # —— 新增三条 Slider —— #
+                speed_slider = gr.Slider(
+                    minimum=0.5, maximum=2.0, step=0.1, value=1.0,
+                    label="语速"
+                )
+                pitch_slider = gr.Slider(
+                    minimum=-12, maximum=12, step=1, value=0,
+                    label="语调"
+                )
+                volume_slider = gr.Slider(
+                    minimum=0.0, maximum=2.0, step=0.1, value=1.0,
+                    label="音量"
+                )
+                
                 gen_button = gr.Button("生成语音",key="gen_button",interactive=True)
             output_audio = gr.Audio(label="生成结果", visible=True,key="output_audio")
 
@@ -75,7 +99,7 @@ with gr.Blocks() as demo:
                          outputs=[gen_button])
 
     gen_button.click(gen_single,
-                     inputs=[prompt_audio, input_text_single, infer_mode],
+                     inputs=[prompt_audio, input_text_single, infer_mode, speed_slider, pitch_slider, volume_slider],
                      outputs=[output_audio])
 
 

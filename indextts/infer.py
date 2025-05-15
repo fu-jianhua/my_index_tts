@@ -8,6 +8,8 @@ import numpy as np
 import sentencepiece as spm
 import torch
 import torchaudio
+import librosa
+from torchaudio.transforms import TimeStretch
 from torch.nn.utils.rnn import pad_sequence
 from omegaconf import OmegaConf
 from tqdm import tqdm
@@ -558,7 +560,7 @@ class IndexTTS:
             return (sampling_rate, wav_data)
 
 
-    def my_infer(self, audio_prompt, text, output_path, verbose=False):
+    def my_infer(self, audio_prompt, text, output_path, speed, pitch, volume, verbose=False):
         """
         添加空白停顿控制
         """
@@ -637,10 +639,27 @@ class IndexTTS:
                 wav_seg = self._synthesize_with_mel(cond_mel, txt, verbose)
                 full_wavs.append(wav_seg)
       
-        wav = torch.cat(full_wavs, dim=1)        
-
+        wav = torch.cat(full_wavs, dim=1)       
+               
         # save audio
         wav = wav.cpu()  # to cpu
+        
+        # 使用 librosa 改变语速但不改变语调
+        wav_np = wav.squeeze().cpu().numpy().astype(np.float32)
+        
+        # 1. 语速处理
+        if speed != 1.0:
+            wav_np = librosa.effects.time_stretch(y=wav_np, rate=speed)
+        # 2. 语调处理
+        if pitch != 0.0:
+            wav_np = librosa.effects.pitch_shift(wav_np, sr=sampling_rate, n_steps=pitch)
+        
+        wav = torch.tensor(wav_np).unsqueeze(0)
+        # 3. 音量处理
+        if volume != 1.0:
+            wav_proc = wav * volume
+            wav = torch.clamp(wav_proc, -32767, 32767).short()
+        
         if output_path:
             # 直接保存音频到指定路径中
             if os.path.isfile(output_path):
@@ -756,7 +775,7 @@ class IndexTTS:
         return torch.cat(wavs, dim=1)
     
     
-    def my_infer_fast(self, audio_prompt, text, output_path, verbose=False):
+    def my_infer_fast(self, audio_prompt, text, output_path, speed, pitch, volume, verbose=False):
         """
         快速长文本推理，添加停顿控制
         """
@@ -826,6 +845,23 @@ class IndexTTS:
         
         # save audio
         wav = wav.cpu()  # to cpu
+                
+        # 使用 librosa 改变语速但不改变语调
+        wav_np = wav.squeeze().cpu().numpy().astype(np.float32)
+        
+        # 1. 语速处理
+        if speed != 1.0:
+            wav_np = librosa.effects.time_stretch(y=wav_np, rate=speed)
+        # 2. 语调处理
+        if pitch != 0.0:
+            wav_np = librosa.effects.pitch_shift(wav_np, sr=sampling_rate, n_steps=pitch)
+        
+        wav = torch.tensor(wav_np).unsqueeze(0)
+        # 3. 音量处理
+        if volume != 1.0:
+            wav_proc = wav * volume
+            wav = torch.clamp(wav_proc, -32767, 32767).short()
+        
         if output_path:
             # 直接保存音频到指定路径中
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -970,7 +1006,7 @@ class IndexTTS:
         end_time = time.perf_counter()
         self.torch_empty_cache()
         
-        return torch.cat(wavs, dim=1)
+        return torch.cat(wavs, dim=0)
 
 if __name__ == "__main__":
     prompt_wav="test_data/input.wav"
